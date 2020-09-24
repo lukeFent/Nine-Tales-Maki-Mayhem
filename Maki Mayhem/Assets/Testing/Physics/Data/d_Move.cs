@@ -11,7 +11,10 @@ public struct d_Move : IComponentData
 {
     public float directionX;
     public float directionZ;
-    public float3 forward;
-    public float speed; 
-    public bool hadMoved; 
+    public float speed;
+    public bool jump; 
+    public bool hadMoved;
+ 
 }
+
+

@@ -5,62 +5,27 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Physics;
 using Unity.Transforms;
-using Unity.Mathematics; 
-public class jcs_TestPhysicsController : JobComponentSystem
+using Unity.Mathematics;
+using Unity.Collections;
+using Unity.Physics.Systems; 
+using Unity.Burst;
+public class jcs_TestPhysicsController : SystemBase
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+
+    protected override void OnUpdate()
     {
 
-         Entities.ForEach((ref d_Move move, ref PhysicsVelocity vel, ref EntSpeedData speed, ref LocalToWorld trans) =>
+        float dT = (float)Time.DeltaTime; 
+
+         Entities.WithName("Moving_Player").ForEach((ref d_Move move, ref PhysicsVelocity vel, ref d_Speed speed, ref Rotation rot, ref LocalToWorld local) =>
         {
-            vel.Linear.z = move.directionZ * speed.speed;
-            vel.Linear.x = move.directionX * speed.speed;
-
-            //1
-            //float3 cammyRight = CameraTarget.instance.cameraTransform.TransformDirection(Vector3.right);
-            //float3 cammyFront = CameraTarget.instance.cameraTransform.TransformDirection(Vector3.forward);
-            //cammyRight.y = 0;
-            //cammyFront.y = 0;
-            //math.normalize(cammyRight);
-            //math.normalize(cammyFront);
-
-            //2
-            //float3 movement = trans.Right * move.directionX * speed.speed * UnityEngine.Time.deltaTime;
-            //movement += trans.Forward * move.directionZ * speed.speed * UnityEngine.Time.deltaTime;
-            //movement.y = 0.0f;
-            //float3 targetPosition = trans.Position + movement;
-            //float3 movementDirection = targetPosition - trans.Position;
-            //movementDirection.y = 0.0f;
-            //math.normalize(movementDirection);
-            //vel.Linear = movementDirection; 
 
 
-            //3
-            //float3 currentFacingXZ = trans.Forward;
-            //currentFacingXZ.y = 0.0f;
-            //float angleDifferenceForward = Vector3.SignedAngle(movementDirection, currentFacingXZ, Vector3.up);
-            //Vector3 targetAngularVelocity = Vector3.zero;
-            //targetAngularVelocity.y = angleDifferenceForward * Mathf.Deg2Rad;
-            //Vector3 currentRotation = trans.Forward;
-            //transform.rotation = Quaternion.LookRotation(Vector3.RotateTowards(transform.forward, cammyFront * vertical + cammyRight * horizontal, rotateSpeed * Time.fixedDeltaTime, 0.0f));
-            //Quaternion syncRotation = transform.rotation;
-            //rigidBody.MovePosition(targetPosition);
-            //if (movement.sqrMagnitude > Mathf.Epsilon)
-            //{
-            //    rigidBody.MoveRotation(transform.rotation);
-            //}
+            vel.Linear.z += local.Forward.z * speed.value * dT;
+            vel.Linear.x += local.Forward.x * speed.value * dT;
 
+        }).WithBurst().Schedule();
 
-
-            //float x = move.directionX * speed.speed;
-            //float z = move.directionZ * speed.speed;        
-            //float3 moveVector = new float3(x, vel.Linear.y, z) ;
-            //vel.Linear = moveVector * transform.Forward; 
-
-
-        }).Run();
-
-        return inputDeps; 
     }
 
 
@@ -68,23 +33,119 @@ public class jcs_TestPhysicsController : JobComponentSystem
 }
 
 
-public class jcs_TestRotation : JobComponentSystem
+public class jcs_TestRotation : SystemBase
 {
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    private EntityQuery cameraQuery;
+   // private EndSimulationEntityCommandBufferSystem system;
+
+    protected override void OnCreate()
     {
+        // system = 
+       // cameraQuery = World.DefaultGameObjectInjectionWorld.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<d_CameraEulerY>());
 
-        Entities.ForEach((ref d_Move move, ref Rotation rot, ref LocalToWorld local) =>
-        {
-            float3 moveVector = new float3(move.directionX, 0, move.directionZ) + local.Position;
-            float3 direction = moveVector - local.Position;
-            math.forward(rot.Value);
-            rot.Value = Quaternion.LookRotation(direction, new Vector3(0, 1, 0));
-
-        }).Run();
-
-        return inputDeps;
     }
 
+    protected override void OnUpdate()
+    {
+
+        Entities.WithName("Rotating_Player").ForEach((ref Rotation rot, in d_Move move, in d_CameraEuler eulerAngleY) =>
+        {
+            float targetAngle = math.atan2(move.directionX, move.directionZ) * Mathf.Rad2Deg + eulerAngleY.Value;
+            var q = rot.Value;
+            var sinP = 2 * ((q.value.w * q.value.y) - (q.value.z * q.value.x));
+            var pitch = math.abs(sinP) >= 1 ? math.sign(sinP) * math.PI / 2 : math.asin(sinP);
+
+            //float angle = Mathf.SmoothDampAngle(pitch, targetAngle, ref turnSmoothVelocity, 0.1f);
+            rot.Value = Quaternion.Euler(0, targetAngle, 0);
 
 
+        }).WithBurst().ScheduleParallel();
+    }
+
+   
+
+   
+}
+
+
+
+public class jcs_TestJump : SystemBase
+{
+
+    protected override void OnUpdate()
+    {
+        Entities.ForEach((ref PhysicsVelocity vel, in d_Move moveData, in d_Jump jump) =>
+        {
+
+            if (moveData.jump)
+            {
+                vel.Linear.y = jump.jumpForce;
+            }
+
+        }).Run();
+    }
+}
+
+[UpdateAfter(typeof(EndFramePhysicsSystem))]
+public class sb_TestTrigger : JobComponentSystem
+{
+    EndSimulationEntityCommandBufferSystem bufferSystem;
+    BuildPhysicsWorld buildPhysicsWorld;
+    StepPhysicsWorld stepPhysicsWorld; 
+    protected override void OnCreate()
+    {
+        bufferSystem = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+
+    }
+    //protected override void OnUpdate()
+    //{ 
+    //    JobHandle job = new TestTriggerJob(bufferSystem.CreateCommandBuffer()).Schedule(stepPhysicsWorld.Simulation);
+    //}
+
+    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    {
+        //EntityCommandBuffer buffer = bufferSystem.CreateCommandBuffer();
+        //JobHandle job = new TestTriggerJob(buffer).Schedule(this);
+        return inputDeps; 
+    }
+
+    struct TestTriggerJob : ITriggerEventsJob
+    {
+        EntityCommandBuffer commandBuffer; 
+
+        public TestTriggerJob(EntityCommandBuffer cb)
+        {
+            commandBuffer = cb; 
+        }
+
+        public void Execute(TriggerEvent triggerEvent)
+        {
+            Entity entityA = triggerEvent.Entities.EntityA;
+            Entity entityB = triggerEvent.Entities.EntityB;
+
+            commandBuffer.AddComponent<tag_Triggered>(entityA);
+
+        }
+    }
+}
+
+public struct tag_Triggered : IComponentData
+{
+
+}
+public struct CharacterControllerStepInput
+{
+    public PhysicsWorld World;
+    public float DeltaTime;
+    public float3 Gravity;
+    public float3 Up;
+    public int MaxIterations;
+    public float Tau;
+    public float Damping;
+    public float SkinWidth;
+    public float ContactTolerance;
+    public float MaxSlope;
+    public int RigidBodyIndex;
+    public float3 CurrentVelocity;
+    public float MaxMovementSpeed;
 }

@@ -27,6 +27,9 @@ public class jcs_PlayerInput : JobComponentSystem
 
             moveData.directionZ -= Input.GetKey(KeyCode.S) ? 1 : 0;
 
+            moveData.jump = Input.GetKey(KeyCode.Space) ? true : false;
+
+
             if (moveData.directionZ != 0 || moveData.directionX != 0)
                  moveData.hadMoved = true; 
 

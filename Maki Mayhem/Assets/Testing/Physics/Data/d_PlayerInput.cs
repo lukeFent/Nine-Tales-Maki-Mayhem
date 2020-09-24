@@ -11,5 +11,6 @@ public struct d_PlayerInput : IComponentData
     public KeyCode down;
     public KeyCode left;
     public KeyCode right;
+    public KeyCode jump;
 
 }

@@ -4,7 +4,7 @@ using UnityEngine;
 using Unity.Entities;
 
 [GenerateAuthoringComponent]
-public struct EntSpeedData : IComponentData
+public struct d_CameraEuler : IComponentData
 {
-    public float speed; 
+    public float Value;
 }
