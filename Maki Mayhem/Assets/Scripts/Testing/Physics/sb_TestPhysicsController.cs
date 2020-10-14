@@ -128,7 +128,7 @@ public class jcs_TestTrigger : JobComponentSystem
             if(physicsVelocityEntities.HasComponent(triggerEvent.Entities.EntityA))
             {
                 PhysicsVelocity aVelocity = physicsVelocityEntities[triggerEvent.Entities.EntityA];
-                aVelocity.Linear.y = 100f;
+                aVelocity.Linear.y = 10f;
                 physicsVelocityEntities[triggerEvent.Entities.EntityA] = aVelocity;
 
 
@@ -137,7 +137,7 @@ public class jcs_TestTrigger : JobComponentSystem
             if (physicsVelocityEntities.HasComponent(triggerEvent.Entities.EntityB))
             {
                 PhysicsVelocity bVelocity = physicsVelocityEntities[triggerEvent.Entities.EntityB];
-                bVelocity.Linear.y = 100f;
+                bVelocity.Linear.y = 10f;
                 physicsVelocityEntities[triggerEvent.Entities.EntityB] = bVelocity;
 
 

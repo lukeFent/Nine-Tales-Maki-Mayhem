@@ -97,7 +97,7 @@ public class HandleSwipe : MonoBehaviour
         float rayDistance = 100f;
      if (RayCastToEntity(ray.origin, ray.direction * rayDistance) == playerEntity)
         {
-            //manager.AddComponent<tag_Touched>(playerEntity);
+            manager.AddComponent<tag_Touched>(playerEntity);
 
 
 
